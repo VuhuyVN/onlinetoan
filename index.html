@@ -1,57 +1,17 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Phòng Họp Lớp</title>
-  <style>
-    body {
-      margin: 0;
-      background: #0b132b;
-      color: white;
-      font-family: system-ui, sans-serif;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    header {
-      background: #1c2541;
-      padding: 10px 16px;
-      font-weight: bold;
-      text-align: center;
-    }
-    iframe {
-      flex: 1;
-      border: none;
-      width: 100%;
-    }
-    footer {
-      background: #1c2541;
-      text-align: center;
-      padding: 6px;
-      font-size: 12px;
-      color: #aaa;
-    }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Phòng họp lớp</title>
+  <script>
+    // 👉 Đổi tên phòng ở đây
+    const ROOM_NAME = "lop10A1-hoplop";
+    // 👉 Tự vào phòng luôn khi mở web
+    window.location.href = `https://meet.jit.si/${ROOM_NAME}`;
+  </script>
 </head>
 <body>
-  <header>🎥 Phòng họp lớp đang hoạt động...</header>
-  <iframe id="meetFrame"
-    allow="camera; microphone; display-capture; fullscreen; autoplay; clipboard-write"
-    src="">
-  </iframe>
-  <footer>Powered by Jitsi · Host miễn phí · Người đầu tiên là quản trị viên</footer>
-
-  <script>
-    // === Tên phòng cố định (đổi tuỳ bạn) ===
-    const ROOM_NAME = "lop10A1-hoplop"; // đổi tuỳ ý
-    const USER_NAME = "Người tham gia";
-
-    // === Tạo URL Jitsi ===
-    const meetUrl = `https://meet.jit.si/${ROOM_NAME}#config.startWithAudioMuted=false&config.startWithVideoMuted=false&userInfo.displayName="${encodeURIComponent(USER_NAME)}"`;
-
-    // Gán iframe
-    document.getElementById("meetFrame").src = meetUrl;
-  </script>
+  <p>Đang vào phòng họp lớp...</p>
 </body>
 </html>
