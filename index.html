@@ -1,12 +1,99 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phòng họp lớp trực tuyến</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Phòng họp lớp - ClassMeet</title>
+  <style>
+    :root{--bg:#0f1720;--card:#0b1220;--accent:#ffcc00;--muted:#8893a5}
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#071022 0%,var(--bg) 100%);color:#fff;font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:18px}
+    .card{width:100%;max-width:980px;background:rgba(255,255,255,0.02);padding:16px;border-radius:12px;box-shadow:0 6px 20px rgba(2,6,23,0.6)}
+    h1{margin:0 0 8px;font-size:20px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+    input[type="text"]{flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#fff}
+    button{background:var(--accent);border:none;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer}
+    button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--muted)}
+    #frameWrap{margin-top:12px;border-radius:12px;overflow:hidden;height:70vh;min-height:420px}
+    iframe{width:100%;height:100%;border:0}
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+    @media (max-width:720px){#frameWrap{height:65vh;min-height:360px}}
+  </style>
 </head>
 <body>
-    <h1>Xin chào, đây là web họp lớp!</h1>
-    <p>Nếu bạn thấy dòng này, GitHub Pages đã hoạt động 🎉</p>
+  <div class="card">
+    <h1>🎓 Phòng họp lớp — Mở là họp (Jitsi)</h1>
+    <div class="controls">
+      <input id="roomName" type="text" placeholder="Nhập tên phòng (vd: Lop10A1-TOAN)" />
+      <button id="joinBtn">Tạo / Vào phòng</button>
+      <button id="randomBtn" class="ghost">Tạo phòng ngẫu nhiên</button>
+      <button id="openNew" class="ghost">Mở phòng ở tab mới</button>
+    </div>
+
+    <div id="frameWrap" style="display:none">
+      <iframe id="jitsiFrame" src="" allow="camera; microphone; display-capture; autoplay; encrypted-media"></iframe>
+    </div>
+
+    <p style="margin:10px 0 0;color:#9fb1c8">
+      Chú ý: Trình duyệt sẽ yêu cầu quyền Camera/Microphone. Để chia sẻ màn hình bấm nút chia sẻ màn hình trong giao diện Jitsi.
+    </p>
+  </div>
+
+  <footer>Host: <strong>meet.jit.si</strong> — Miễn phí vĩnh viễn · Chạy trên GitHub Pages</footer>
+
+<script>
+  const joinBtn = document.getElementById('joinBtn');
+  const randBtn = document.getElementById('randomBtn');
+  const openNew = document.getElementById('openNew');
+  const roomInput = document.getElementById('roomName');
+  const frameWrap = document.getElementById('frameWrap');
+  const jitsiFrame = document.getElementById('jitsiFrame');
+
+  // build Jitsi URL with useful config params (start with mic/cam on)
+  function makeJitsiUrl(room) {
+    const safe = encodeURIComponent(room.trim());
+    // config: startWithAudioMuted=false(start mic ON), startWithVideoMuted=false(camera ON)
+    // interfaceConfig to simplify toolbar; you can adjust as needed
+    const opts = [
+      'config.startWithAudioMuted=false',
+      'config.startWithVideoMuted=false',
+      'config.disableDeepLinking=true',
+      'interfaceConfig.DISABLE_VIDEO_BACKGROUND=true'
+    ];
+    return `https://meet.jit.si/${safe}#${opts.join('&')}`;
+  }
+
+  joinBtn.addEventListener('click', () => {
+    const name = roomInput.value.trim();
+    if(!name){ alert('Nhập tên phòng trước (vd: Lop10A1-TOAN)'); roomInput.focus(); return; }
+    openRoomInFrame(makeJitsiUrl(name));
+  });
+
+  randBtn.addEventListener('click', () => {
+    const rand = 'Lop-' + Math.random().toString(36).slice(2,9);
+    roomInput.value = rand;
+    openRoomInFrame(makeJitsiUrl(rand));
+  });
+
+  openNew.addEventListener('click', () => {
+    const name = roomInput.value.trim();
+    if(!name){ alert('Nhập tên phòng trước'); return; }
+    window.open(makeJitsiUrl(name), '_blank');
+  });
+
+  function openRoomInFrame(url) {
+    frameWrap.style.display = 'block';
+    jitsiFrame.src = url;
+    // scroll iframe into view on small screens
+    setTimeout(()=> jitsiFrame.scrollIntoView({behavior:'smooth'}), 200);
+  }
+
+  // If URL contains ?room=XYZ, auto-join
+  (function autoJoinFromQuery(){
+    const params = new URLSearchParams(window.location.search);
+    const r = params.get('room');
+    if(r){ roomInput.value = r; openRoomInFrame(makeJitsiUrl(r)); }
+  })();
+</script>
 </body>
 </html>
