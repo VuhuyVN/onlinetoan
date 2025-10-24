@@ -1,23 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <title>Phòng họp lớp</title>
+  <meta charset="UTF-8">
+  <title>Họp Lớp Online (PeerJS)</title>
+  <style>
+    body { background:#0e0e0e; color:white; text-align:center; font-family:sans-serif; }
+    video { width:45%; border-radius:12px; margin:10px; background:#222; }
+    input,button { padding:10px; border:none; border-radius:8px; margin:5px; }
+    button { background:#ffcc00; font-weight:bold; cursor:pointer; }
+  </style>
 </head>
 <body>
-  <h2>Phòng họp lớp</h2>
-  <video id="myVideo" autoplay playsinline muted></video>
+  <h2>🎥 Họp Lớp Online</h2>
+  <video id="myVideo" autoplay muted playsinline></video>
+  <video id="otherVideo" autoplay playsinline></video><br>
+  <input id="room" placeholder="Nhập tên phòng..." />
+  <button id="joinBtn">Tham gia</button>
 
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script>
-    async function start() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        document.getElementById("myVideo").srcObject = stream;
-      } catch (err) {
-        alert("Không mở được camera hoặc mic: " + err.message);
-      }
+    const myVideo = document.getElementById('myVideo');
+    const otherVideo = document.getElementById('otherVideo');
+    const joinBtn = document.getElementById('joinBtn');
+    const roomInput = document.getElementById('room');
+
+    let peer, myStream;
+
+    async function init() {
+      myStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      myVideo.srcObject = myStream;
     }
-    start();
+
+    init();
+
+    joinBtn.onclick = () => {
+      const room = roomInput.value.trim();
+      if (!room) return alert("Nhập tên phòng!");
+
+      peer = new Peer(room, { host: 'peerjs.com', secure: true, port: 443 });
+
+      peer.on('open', id => console.log("ID:", id));
+
+      peer.on('call', call => {
+        call.answer(myStream);
+        call.on('stream', stream => {
+          otherVideo.srcObject = stream;
+        });
+      });
+
+      // Gọi người khác
+      const otherID = prompt("Nhập ID người bạn (hoặc để trống nếu bạn là người tạo):");
+      if (otherID) {
+        const call = peer.call(otherID, myStream);
+        call.on('stream', stream => {
+          otherVideo.srcObject = stream;
+        });
+      }
+    };
   </script>
 </body>
 </html>
