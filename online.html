@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Phòng họp lớp</title>
+</head>
+<body>
+  <h2>Phòng họp lớp</h2>
+  <video id="myVideo" autoplay playsinline muted></video>
+
+  <script>
+    async function start() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById("myVideo").srcObject = stream;
+      } catch (err) {
+        alert("Không mở được camera hoặc mic: " + err.message);
+      }
+    }
+    start();
+  </script>
+</body>
+</html>
