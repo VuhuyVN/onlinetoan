@@ -1,75 +1,74 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Phòng họp lớp</title>
+  <meta charset="utf-8">
+  <title>Phòng họp online miễn phí</title>
   <style>
-    body { margin:0; background:#0b132b; color:#fff; font-family:sans-serif; text-align:center; }
-    video { width:45%; border-radius:10px; margin:10px; background:#000; }
-    button { padding:10px 16px; margin:10px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
-    #controls { position:fixed; bottom:10px; width:100%; left:0; text-align:center; }
+    body { font-family: sans-serif; text-align: center; background: #1e1e1e; color: white; }
+    video { width: 45%; margin: 10px; border-radius: 12px; background: black; }
+    button { margin: 10px; padding: 10px 15px; border: none; border-radius: 6px; background: #3b82f6; color: white; cursor: pointer; }
+    button:hover { background: #2563eb; }
   </style>
 </head>
 <body>
-  <h2>🎥 Phòng họp lớp</h2>
-  <div id="videos">
-    <video id="localVideo" autoplay playsinline muted></video>
-    <video id="remoteVideo" autoplay playsinline></video>
-  </div>
+  <h2>🎥 Phòng họp trực tuyến</h2>
+  <video id="localVideo" autoplay muted playsinline></video>
+  <video id="remoteVideo" autoplay playsinline></video><br>
+  <button id="shareScreen">🖥️ Chia sẻ màn hình</button>
+  <button id="copyLink">📋 Sao chép link phòng</button>
 
-  <div id="controls">
-    <button id="startBtn">🔊 Bắt đầu họp</button>
-    <button id="shareBtn">🖥️ Chia sẻ màn hình</button>
-  </div>
+  <script>
+    const room = location.hash.substring(1) || Math.random().toString(36).substring(2, 9);
+    if (!location.hash) location.hash = room;
+    const servers = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    const pc = new RTCPeerConnection(servers);
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    const shareBtn = document.getElementById('shareScreen');
+    const copyBtn = document.getElementById('copyLink');
 
-<script>
-const ws = new WebSocket("wss://your-server.glitch.me"); // sửa thành link WebSocket thật
-let localStream, pc;
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(stream => {
+      localVideo.srcObject = stream;
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+    });
 
-ws.onmessage = async (event) => {
-  const data = JSON.parse(event.data);
-  if (data.offer) {
-    await createAnswer(data.offer);
-  } else if (data.answer) {
-    await pc.setRemoteDescription(data.answer);
-  } else if (data.ice) {
-    await pc.addIceCandidate(data.ice);
-  }
-};
+    pc.ontrack = e => remoteVideo.srcObject = e.streams[0];
 
-async function start() {
-  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  document.getElementById('localVideo').srcObject = localStream;
-  createPeer();
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  ws.send(JSON.stringify({ offer }));
-}
+    const ws = new WebSocket('wss://ws.postman-echo.com/raw'); // server relay miễn phí
+    ws.onmessage = async e => {
+      const msg = JSON.parse(e.data);
+      if (msg.room !== room) return;
+      if (msg.offer) {
+        await pc.setRemoteDescription(new RTCSessionDescription(msg.offer));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        ws.send(JSON.stringify({ answer, room }));
+      } else if (msg.answer) {
+        await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+      } else if (msg.candidate) {
+        await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+      }
+    };
+    pc.onicecandidate = e => e.candidate && ws.send(JSON.stringify({ candidate: e.candidate, room }));
 
-function createPeer() {
-  pc = new RTCPeerConnection();
-  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-  pc.ontrack = e => document.getElementById('remoteVideo').srcObject = e.streams[0];
-  pc.onicecandidate = e => e.candidate && ws.send(JSON.stringify({ ice: e.candidate }));
-}
+    (async () => {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      ws.onopen = () => ws.send(JSON.stringify({ offer, room }));
+    })();
 
-async function createAnswer(offer) {
-  createPeer();
-  await pc.setRemoteDescription(offer);
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  ws.send(JSON.stringify({ answer }));
-}
+    shareBtn.onclick = async () => {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const track = stream.getVideoTracks()[0];
+      const sender = pc.getSenders().find(s => s.track.kind === 'video');
+      sender.replaceTrack(track);
+      track.onended = () => sender.replaceTrack(localVideo.srcObject.getVideoTracks()[0]);
+    };
 
-document.getElementById("startBtn").onclick = start;
-
-document.getElementById("shareBtn").onclick = async () => {
-  const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-  const videoTrack = displayStream.getVideoTracks()[0];
-  const sender = pc.getSenders().find(s => s.track.kind === "video");
-  sender.replaceTrack(videoTrack);
-};
-</script>
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(location.href);
+      alert('Đã sao chép link phòng!\nGửi link này cho người khác để vào chung.');
+    };
+  </script>
 </body>
 </html>
