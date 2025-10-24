@@ -1,17 +1,75 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Phòng họp lớp</title>
-  <script>
-    // 👉 Đổi tên phòng ở đây
-    const ROOM_NAME = "lop10A1-hoplop";
-    // 👉 Tự vào phòng luôn khi mở web
-    window.location.href = `https://meet.jit.si/${ROOM_NAME}`;
-  </script>
+  <style>
+    body { margin:0; background:#0b132b; color:#fff; font-family:sans-serif; text-align:center; }
+    video { width:45%; border-radius:10px; margin:10px; background:#000; }
+    button { padding:10px 16px; margin:10px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+    #controls { position:fixed; bottom:10px; width:100%; left:0; text-align:center; }
+  </style>
 </head>
 <body>
-  <p>Đang vào phòng họp lớp...</p>
+  <h2>🎥 Phòng họp lớp</h2>
+  <div id="videos">
+    <video id="localVideo" autoplay playsinline muted></video>
+    <video id="remoteVideo" autoplay playsinline></video>
+  </div>
+
+  <div id="controls">
+    <button id="startBtn">🔊 Bắt đầu họp</button>
+    <button id="shareBtn">🖥️ Chia sẻ màn hình</button>
+  </div>
+
+<script>
+const ws = new WebSocket("wss://your-server.glitch.me"); // sửa thành link WebSocket thật
+let localStream, pc;
+
+ws.onmessage = async (event) => {
+  const data = JSON.parse(event.data);
+  if (data.offer) {
+    await createAnswer(data.offer);
+  } else if (data.answer) {
+    await pc.setRemoteDescription(data.answer);
+  } else if (data.ice) {
+    await pc.addIceCandidate(data.ice);
+  }
+};
+
+async function start() {
+  localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  document.getElementById('localVideo').srcObject = localStream;
+  createPeer();
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  ws.send(JSON.stringify({ offer }));
+}
+
+function createPeer() {
+  pc = new RTCPeerConnection();
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  pc.ontrack = e => document.getElementById('remoteVideo').srcObject = e.streams[0];
+  pc.onicecandidate = e => e.candidate && ws.send(JSON.stringify({ ice: e.candidate }));
+}
+
+async function createAnswer(offer) {
+  createPeer();
+  await pc.setRemoteDescription(offer);
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  ws.send(JSON.stringify({ answer }));
+}
+
+document.getElementById("startBtn").onclick = start;
+
+document.getElementById("shareBtn").onclick = async () => {
+  const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+  const videoTrack = displayStream.getVideoTracks()[0];
+  const sender = pc.getSenders().find(s => s.track.kind === "video");
+  sender.replaceTrack(videoTrack);
+};
+</script>
 </body>
 </html>
